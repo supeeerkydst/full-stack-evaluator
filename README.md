@@ -8,7 +8,7 @@ This monorepo contains both the **backend (.NET 9 Web API)** and **frontend (Rea
 
 ## ⏱️ Time Limit
 
-**2 to 3 hours**  
+**4 to 5 hours**  
 Treat this like a timed test. Don’t overthink it. Show your best work in that window.
 
 ---
