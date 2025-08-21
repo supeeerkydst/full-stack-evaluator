@@ -3,8 +3,8 @@ import Tasks from "./Tasks"
 
 function App() {
   return (
-    <div className="app">
-      <h1>📝 React Task Evaluator</h1>
+    <div>
+      <h1>Task Manager</h1>
       <Tasks />
     </div>
   );
