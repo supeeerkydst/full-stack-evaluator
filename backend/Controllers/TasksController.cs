@@ -24,6 +24,7 @@ namespace TaskManager.API
         public async Task<IActionResult> Get() {
             var tasks = await _context.Tasks
                 .AsNoTracking()
+                .OrderBy(t => t.IsDone)
                 .Select(t => new {
                     t.Id,
                     t.Title,

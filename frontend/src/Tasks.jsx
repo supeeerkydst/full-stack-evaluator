@@ -19,7 +19,8 @@ function Tasks() {
   const [newUserEmail, setNewUserEmail] = useState("");
   const [emailError, setEmailError] = useState("");
 
-  // Fetch tasks and users
+  const [filter, setFilter] = useState("all"); // "all" | "pending" | "done"
+
   useEffect(() => {
     api.get("/tasks").then(res => setTasks(res.data)).catch(console.error);
     api.get("/users").then(res => setUsers(res.data)).catch(console.error);
@@ -104,6 +105,12 @@ function Tasks() {
     }
   };
 
+  const filteredTasks = tasks.filter(task => {
+    if (filter === "all") return true;
+    if (filter === "pending") return !task.isDone;
+    if (filter === "done") return task.isDone;
+  });
+
   return (
     <div style={{
       display: "flex",
@@ -147,37 +154,135 @@ function Tasks() {
         padding: "20px",
         borderRadius: "12px",
         boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-        overflowX: "auto"
+        overflowX: "auto",
+        minHeight: "400px", // ensures the card doesn't shrink too much
+        maxHeight: "80vh",  // responsive max height to fit screen
+        display: "flex",
+        flexDirection: "column"
       }}>
         <h2 style={{ marginBottom: "20px", color: "#333" }}>Task List</h2>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px", minWidth: "400px" }}>
-          <thead style={{ background: "#f1f3f4", textAlign: "left" }}>
-            <tr>
-              <th style={{ padding: "12px", borderBottom: "1px solid #ddd" }}>ID</th>
-              <th style={{ padding: "12px", borderBottom: "1px solid #ddd" }}>Title</th>
-              <th style={{ padding: "12px", borderBottom: "1px solid #ddd" }}>Assigned User</th>
-              <th style={{ padding: "12px", borderBottom: "1px solid #ddd" }}>Status</th>
-              <th style={{ padding: "12px", borderBottom: "1px solid #ddd" }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {tasks.map(task => {
-              const user = users.find(u => u.id === task.userId);
-              return (
-                <tr key={task.id} style={{ borderBottom: "1px solid #eee" }}>
-                  <td style={{ padding: "12px" }}>{task.id}</td>
-                  <td style={{ padding: "12px" }}>{task.title}</td>
-                  <td style={{ padding: "12px" }}>{user?.email || "N/A"}</td>
-                  <td style={{ padding: "12px" }}>{task.isDone ? "✅ Done" : "❌ Pending"}</td>
-                  <td style={{ padding: "12px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                    {!task.isDone && <button onClick={() => openEditModal(task)} style={{ padding: "6px 12px", borderRadius: "6px", background: "#ffa000", border: "none", color: "#fff", cursor: "pointer" }}>Edit</button>}
-                    <button onClick={() => openDeleteModal(task)} style={{ padding: "6px 12px", borderRadius: "6px", background: "#d32f2f", border: "none", color: "#fff", cursor: "pointer" }}>Delete</button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "10px", gap: "10px" }}>
+          <button
+            onClick={() => setFilter("all")}
+            style={{
+              padding: "6px 12px",
+              borderRadius: "6px",
+              background: filter === "all" ? "#1976d2" : "#ccc",
+              color: "#fff",
+              border: "none",
+              cursor: "pointer"
+            }}
+          >
+            All
+          </button>
+          <button
+            onClick={() => setFilter("pending")}
+            style={{
+              padding: "6px 12px",
+              borderRadius: "6px",
+              background: filter === "pending" ? "#1976d2" : "#ccc",
+              color: "#fff",
+              border: "none",
+              cursor: "pointer"
+            }}
+          >
+            Pending
+          </button>
+          <button
+            onClick={() => setFilter("done")}
+            style={{
+              padding: "6px 12px",
+              borderRadius: "6px",
+              background: filter === "done" ? "#1976d2" : "#ccc",
+              color: "#fff",
+              border: "none",
+              cursor: "pointer"
+            }}
+          >
+            Done
+          </button>
+        </div>
+        <div style={{ overflowY: "auto", flex: "1 1 auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px", minWidth: "400px" }}>
+            <thead style={{ background: "#f1f3f4", textAlign: "left" }}>
+              <tr>
+                <th style={{ padding: "12px", borderBottom: "1px solid #ddd" }}>ID</th>
+                <th style={{ padding: "12px", borderBottom: "1px solid #ddd" }}>Title</th>
+                <th style={{ padding: "12px", borderBottom: "1px solid #ddd" }}>Assigned User</th>
+                <th style={{ padding: "12px", borderBottom: "1px solid #ddd" }}>Status</th>
+                <th style={{ padding: "12px", borderBottom: "1px solid #ddd", width: "130px" }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredTasks.map(task => {
+                const user = users.find(u => u.id === task.userId);
+                return (
+                  <tr key={task.id} style={{ borderBottom: "1px solid #eee" }}>
+                    <td style={{ padding: "12px" }}>{task.id}</td>
+                    <td style={{ padding: "12px" }}>{task.title}</td>
+                    <td style={{ padding: "12px" }}>{user?.email || "N/A"}</td>
+                    <td style={{ padding: "12px" }}>{task.isDone ? "✅ Done" : "❌ Pending"}</td>
+                    <td style={{
+                      padding: "12px",
+                      display: "flex",
+                      gap: "10px",
+                      justifyContent: "center",
+                      minWidth: "130px"
+                    }}>
+                      {!task.isDone ? (
+                        <>
+                          <button
+                            onClick={() => openEditModal(task)}
+                            style={{
+                              flex: 1,
+                              padding: "6px 12px",
+                              borderRadius: "6px",
+                              background: "#ffa000",
+                              border: "none",
+                              color: "#fff",
+                              cursor: "pointer"
+                            }}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => openDeleteModal(task)}
+                            style={{
+                              flex: 1,
+                              padding: "6px 12px",
+                              borderRadius: "6px",
+                              background: "#d32f2f",
+                              border: "none",
+                              color: "#fff",
+                              cursor: "pointer"
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={() => openDeleteModal(task)}
+                          style={{
+                            flex: 1,
+                            padding: "6px 12px",
+                            borderRadius: "6px",
+                            background: "#d32f2f",
+                            border: "none",
+                            color: "#fff",
+                            cursor: "pointer"
+                          }}
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <EditModal task={editingTask} users={users} onClose={closeModal} onSave={handleSave} onToggleStatus={toggleStatus} />
