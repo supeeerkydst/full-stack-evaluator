@@ -21,11 +21,13 @@ namespace TaskManager.API
         }
 
         [HttpGet]
-        public async Task<IActionResult> Get() {
+        public async Task<IActionResult> Get()
+        {
             var tasks = await _context.Tasks
                 .AsNoTracking()
                 .OrderBy(t => t.IsDone)
-                .Select(t => new {
+                .Select(t => new
+                {
                     t.Id,
                     t.Title,
                     t.IsDone,
@@ -37,16 +39,18 @@ namespace TaskManager.API
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] TaskCreateDto dto) {
+        public async Task<IActionResult> Create([FromBody] TaskCreateDto dto)
+        {
             // basic server-side validation
             if (string.IsNullOrWhiteSpace(dto.Title))
                 return BadRequest("Title is required.");
 
             // map DTO -> entity (do not accept nested user object)
-            var task = new TaskItem {
+            var task = new TaskItem
+            {
                 Title = dto.Title,
                 IsDone = dto.IsDone,
-                // default to 1 seeded a demo user or use provided dto.UserId
+                // default to 1 temporarily seeded a demo user or use provided dto.UserId
                 UserId = dto.UserId ?? 1
             };
 
@@ -57,7 +61,8 @@ namespace TaskManager.API
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, [FromBody] TaskUpdateDto dto) {
+        public async Task<IActionResult> Update(int id, [FromBody] TaskUpdateDto dto)
+        {
             if (string.IsNullOrWhiteSpace(dto.Title))
                 return BadRequest("Title is required.");
 
@@ -72,7 +77,8 @@ namespace TaskManager.API
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(int id) {
+        public async Task<IActionResult> Delete(int id)
+        {
             var task = await _context.Tasks.FindAsync(id);
             if (task == null) return NotFound();
 
@@ -86,7 +92,26 @@ namespace TaskManager.API
         public async Task<IActionResult> GetById(int id)
         {
             var task = await _context.Tasks.FindAsync(id);
-            return task is null ? NotFound() : Ok(task);   
+            return task is null ? NotFound() : Ok(task);
         }
+        
+        [HttpGet("usertasks/{id}")]
+        public async Task<IActionResult> GetUserTasks(int id)
+        {
+            var task = await _context.Tasks
+                .Where(t => t.UserId == id)
+                .AsNoTracking()
+                .OrderBy(t => t.IsDone)
+                .Select(t => new {
+                    t.Id,
+                    t.Title,
+                    t.IsDone,
+                    t.UserId
+                })
+                .ToListAsync();
+
+            return Ok(task);
+        }
+
     }
 }

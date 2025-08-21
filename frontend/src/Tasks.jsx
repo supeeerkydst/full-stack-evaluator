@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "./api/axios";
 import EditModal from "./EditModal";
 import DeleteModal from "./DeleteModal";
@@ -19,7 +20,9 @@ function Tasks() {
   const [newUserEmail, setNewUserEmail] = useState("");
   const [emailError, setEmailError] = useState("");
 
-  const [filter, setFilter] = useState("all"); // "all" | "pending" | "done"
+  const [filter, setFilter] = useState("all");
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     api.get("/tasks").then(res => setTasks(res.data)).catch(console.error);
@@ -36,7 +39,7 @@ function Tasks() {
     } catch (err) { console.error(err); }
   };
 
-  // Edit Task handlers
+  // Edit Task
   const openEditModal = (task) => { setEditingTask(task); setIsModalOpen(true); };
   const closeModal = () => { setEditingTask(null); setIsModalOpen(false); };
   const toggleStatus = () => { if (!editingTask.isDone) setEditingTask({ ...editingTask, isDone: true }); };
@@ -51,7 +54,7 @@ function Tasks() {
     }
   };
 
-  // Delete Task handlers
+  // Delete Task
   const openDeleteModal = (task) => { setTaskToDelete(task); setIsDeleteModalOpen(true); };
   const closeDeleteModal = () => { setTaskToDelete(null); setIsDeleteModalOpen(false); };
   const handleDelete = async () => {
@@ -62,14 +65,14 @@ function Tasks() {
     } catch (err) { console.error(err); }
   };
 
-  // Add User handlers
+  // Add User
   const openAddUserModal = () => setIsAddUserModalOpen(true);
   const closeAddUserModal = () => { setNewUserEmail(""); setEmailError(""); setIsAddUserModalOpen(false); };
   const handleEmailChange = (e) => {
     const email = e.target.value;
     setNewUserEmail(email);
 
-    // Live email validation
+    // email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email) setEmailError("Email is required.");
     else if (!emailRegex.test(email)) setEmailError("Invalid email format.");
@@ -85,15 +88,15 @@ function Tasks() {
   if (emailError) return; // prevent invalid
 
   try {
-    // generate default password hash or plain password (hashed on server ideally)
-      const defaultPasswordHash = "default123"; // can be hashed server-side
+    // generate default password hash or plain password (hashed on server)
+      const defaultPasswordHash = "default123";
       const res = await api.post("/users", { email, passwordHash: defaultPasswordHash });
 
       setUsers([...users, res.data]);
       setAssignedTo(res.data.id);
       closeAddUserModal();
 
-      alert(`User ${res.data.email} added successfully!`); // 👈 display success message
+      alert(`User ${res.data.email} added successfully!`);
     } catch (err) {
       if (err.response?.status === 400) {
         const data = err.response.data;
@@ -111,6 +114,13 @@ function Tasks() {
     if (filter === "done") return task.isDone;
   });
 
+  // logout
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    navigate("/");
+    window.location.reload();
+  };
+
   return (
     <div style={{
       display: "flex",
@@ -118,7 +128,7 @@ function Tasks() {
       gap: "20px",
       fontFamily: "Roboto, sans-serif"
     }}>
-      {/* Left Column */}
+
       <div style={{
         flex: "1 1 280px",
         minWidth: "280px",
@@ -146,7 +156,7 @@ function Tasks() {
         </form>
       </div>
 
-      {/* Right Column */}
+
       <div style={{
         flex: "2 1 500px",
         minWidth: "300px",
@@ -155,11 +165,29 @@ function Tasks() {
         borderRadius: "12px",
         boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
         overflowX: "auto",
-        minHeight: "400px", // ensures the card doesn't shrink too much
-        maxHeight: "80vh",  // responsive max height to fit screen
+        minHeight: "400px",
+        maxHeight: "80vh",
         display: "flex",
         flexDirection: "column"
       }}>
+        
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "10px" }}>
+          <button
+            onClick={handleLogout}
+            style={{
+              padding: "8px 18px",
+              borderRadius: "6px",
+              background: "#d32f2f",
+              color: "#fff",
+              border: "none",
+              fontWeight: "bold",
+              cursor: "pointer"
+            }}
+          >
+            Logout
+          </button>
+        </div>
+
         <h2 style={{ marginBottom: "20px", color: "#333" }}>Task List</h2>
         <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "10px", gap: "10px" }}>
           <button
