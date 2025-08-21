@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "./api/axios";
+import EditModal from "./EditModal";
+import DeleteModal from "./DeleteModal";
 
 function Tasks() {
   const [tasks, setTasks] = useState([]);
@@ -7,67 +9,52 @@ function Tasks() {
   const [title, setTitle] = useState("");
   const [assignedTo, setAssignedTo] = useState("");
 
-  // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
 
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState(null);
+
   // Fetch tasks and users
   useEffect(() => {
-    api.get("/tasks")
-      .then(res => setTasks(res.data))
-      .catch(err => console.error(err));
-
-    api.get("/users")
-      .then(res => setUsers(res.data))
-      .catch(err => console.error(err));
+    api.get("/tasks").then(res => setTasks(res.data)).catch(console.error);
+    api.get("/users").then(res => setUsers(res.data)).catch(console.error);
   }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    const newTask = {
-      title,
-      isDone: false,
-      userId: parseInt(assignedTo),
-    };
-
+    const newTask = { title, isDone: false, userId: parseInt(assignedTo) };
     try {
       const res = await api.post("/tasks", newTask);
       setTasks([...tasks, res.data]);
-      setTitle("");
-      setAssignedTo("");
-    } catch (err) {
-      console.error(err);
-    }
+      setTitle(""); setAssignedTo("");
+    } catch (err) { console.error(err); }
   };
 
-  // Open modal
-  const openEditModal = (task) => {
+  // Edit Task handlers
+  const openEditModal = (task) => { setEditingTask(task); setIsModalOpen(true); };
+  const closeModal = () => { setEditingTask(null); setIsModalOpen(false); };
+  const toggleStatus = () => { if (!editingTask.isDone) setEditingTask({ ...editingTask, isDone: true }); };
+  const handleSave = async (task, saveToAPI) => {
     setEditingTask(task);
-    setIsModalOpen(true);
-  };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setEditingTask(null);
-  };
-
-  // Toggle status
-  const toggleStatus = () => {
-    if (!editingTask.isDone) {
-      setEditingTask({ ...editingTask, isDone: true });
+    if (saveToAPI) {
+      try {
+        const res = await api.put(`/tasks/${task.id}`, task);
+        setTasks(tasks.map(t => t.id === res.data.id ? res.data : t));
+        closeModal();
+      } catch (err) { console.error(err); }
     }
   };
 
-  const handleUpdate = async () => {
+  // Delete Task handlers
+  const openDeleteModal = (task) => { setTaskToDelete(task); setIsDeleteModalOpen(true); };
+  const closeDeleteModal = () => { setTaskToDelete(null); setIsDeleteModalOpen(false); };
+  const handleDelete = async () => {
     try {
-      const updatedTask = { ...editingTask };
-      const res = await api.put(`/tasks/${editingTask.id}`, updatedTask);
-      setTasks(tasks.map(t => t.id === res.data.id ? res.data : t));
-      closeModal();
-    } catch (err) {
-      console.error(err);
-    }
+      await api.delete(`/tasks/${taskToDelete.id}`);
+      setTasks(tasks.filter(t => t.id !== taskToDelete.id));
+      closeDeleteModal();
+    } catch (err) { console.error(err); }
   };
 
   return (
@@ -76,28 +63,14 @@ function Tasks() {
       <div style={{ width: "50%", height: "200px", background: "#fff", padding: "30px", borderRadius: "12px", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}>
         <h2 style={{ marginBottom: "20px", color: "#333" }}>Create Task</h2>
         <form onSubmit={handleSubmit} style={{ display: "flex", gap: "15px" }}>
-          <input
-            type="text"
-            placeholder="Task Title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-            style={{ padding: "12px", borderRadius: "8px", border: "1px solid #ccc", fontSize: "14px", flex: 1 }}
-          />
-          <select
-            value={assignedTo}
-            onChange={(e) => setAssignedTo(e.target.value)}
-            required
-            style={{ padding: "12px", borderRadius: "8px", border: "1px solid #ccc", fontSize: "14px" }}
-          >
+          <input type="text" placeholder="Task Title" value={title} onChange={(e) => setTitle(e.target.value)} required
+            style={{ padding: "12px", borderRadius: "8px", border: "1px solid #ccc", fontSize: "14px", flex: 1 }} />
+          <select value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)} required
+            style={{ padding: "12px", borderRadius: "8px", border: "1px solid #ccc", fontSize: "14px" }}>
             <option value="">-- Assign User --</option>
-            {users.map(user => (
-              <option key={user.id} value={user.id}>{user.email}</option>
-            ))}
+            {users.map(user => <option key={user.id} value={user.id}>{user.email}</option>)}
           </select>
-          <button type="submit" style={{ padding: "12px", borderRadius: "8px", background: "#1976d2", color: "#fff", border: "none", fontWeight: "bold", cursor: "pointer" }}>
-            Add Task
-          </button>
+          <button type="submit" style={{ padding: "12px", borderRadius: "8px", background: "#1976d2", color: "#fff", border: "none", fontWeight: "bold", cursor: "pointer" }}>Add Task</button>
         </form>
       </div>
 
@@ -124,33 +97,8 @@ function Tasks() {
                   <td style={{ padding: "12px" }}>{user?.email || "N/A"}</td>
                   <td style={{ padding: "12px" }}>{task.isDone ? "✅ Done" : "❌ Pending"}</td>
                   <td style={{ padding: "12px", display: "flex", gap: "10px" }}>
-                    {!task.isDone && (
-                      <button
-                        onClick={() => openEditModal(task)}
-                        style={{
-                          padding: "6px 12px",
-                          borderRadius: "6px",
-                          background: "#ffa000",
-                          border: "none",
-                          color: "#fff",
-                          cursor: "pointer"
-                        }}
-                      >
-                        Edit
-                      </button>
-                    )}
-                    <button
-                      style={{
-                        padding: "6px 12px",
-                        borderRadius: "6px",
-                        background: "#d32f2f",
-                        border: "none",
-                        color: "#fff",
-                        cursor: "pointer"
-                      }}
-                    >
-                      Delete
-                    </button>
+                    {!task.isDone && <button onClick={() => openEditModal(task)} style={{ padding: "6px 12px", borderRadius: "6px", background: "#ffa000", border: "none", color: "#fff", cursor: "pointer" }}>Edit</button>}
+                    <button onClick={() => openDeleteModal(task)} style={{ padding: "6px 12px", borderRadius: "6px", background: "#d32f2f", border: "none", color: "#fff", cursor: "pointer" }}>Delete</button>
                   </td>
                 </tr>
               );
@@ -159,54 +107,8 @@ function Tasks() {
         </table>
       </div>
 
-      {/* Edit Modal */}
-      {isModalOpen && editingTask && (
-        <div style={{
-          position: "fixed", top: 0, left: 0, width: "100%", height: "100%",
-          background: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center"
-        }}>
-          <div style={{ width: "400px", background: "#fff", padding: "30px", borderRadius: "12px", position: "relative" }}>
-            <h2>Edit Task</h2>
-            <p><strong>Title:</strong></p>
-            <input
-              type="text"
-              value={editingTask.title}
-              onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
-              style={{ width: "100%", padding: "10px", marginBottom: "15px", borderRadius: "8px", border: "1px solid #ccc" }}
-            />
-            <p><strong>Assigned User:</strong></p>
-            <select
-              value={editingTask.userId}
-              onChange={(e) => setEditingTask({ ...editingTask, userId: parseInt(e.target.value) })}
-              style={{ width: "100%", padding: "10px", marginBottom: "15px", borderRadius: "8px", border: "1px solid #ccc" }}
-            >
-              {users.map(user => (
-                <option key={user.id} value={user.id}>{user.email}</option>
-              ))}
-            </select>
-            <p><strong>Status:</strong></p>
-            <button
-              onClick={toggleStatus}
-              disabled={editingTask.isDone}
-              style={{
-                padding: "10px 20px",
-                borderRadius: "8px",
-                background: editingTask.isDone ? "#ccc" : "#4caf50",
-                border: "none",
-                color: "#fff",
-                cursor: editingTask.isDone ? "not-allowed" : "pointer",
-                marginBottom: "20px"
-              }}
-            >
-              {editingTask.isDone ? "✅ Done" : "❌ Pending"}
-            </button>
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
-              <button onClick={closeModal} style={{ padding: "8px 16px", borderRadius: "8px", border: "none", background: "#d32f2f", color: "#fff" }}>Cancel</button>
-              <button onClick={handleUpdate} style={{ padding: "8px 16px", borderRadius: "8px", border: "none", background: "#1976d2", color: "#fff" }}>Save</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <EditModal task={editingTask} users={users} onClose={closeModal} onSave={handleSave} onToggleStatus={toggleStatus} />
+      <DeleteModal task={taskToDelete} onClose={closeDeleteModal} onDelete={handleDelete} />
     </div>
   );
 }
